@@ -1,11 +1,7 @@
 use anyhow::Context;
 
-/// 1K target for the longer dimension (1920 px horizontal for landscape,
-/// 1920 px vertical for portrait). The shorter dimension is derived
-/// automatically by ffmpeg to preserve the exact source aspect ratio.
-const TARGET_LONG_SIDE: u32 = 1920;
+const TARGET_LONG_SIDE: u32 = 1280;
 
-/// Probe the first video stream of `input` and return its width and height.
 async fn probe_dimensions(input: &str) -> anyhow::Result<(u32, u32)> {
     let output = tokio::process::Command::new("ffprobe")
         .args([
@@ -44,41 +40,19 @@ async fn probe_dimensions(input: &str) -> anyhow::Result<(u32, u32)> {
     Ok((w, h))
 }
 
-/// Upscale `input` to 1K, preserving the original aspect ratio exactly.
-///
-/// The longer dimension is scaled to [`TARGET_LONG_SIDE`]_px (1920); the
-/// shorter dimension is computed by ffmpeg to match the source ratio.
-/// No cropping or letterboxing is applied.
-///
-/// # Filter pipeline
-///
-/// 1. **`hqdn3d`** — light spatial denoise before scaling (prevents noise
-///    amplification during the upscale).
-/// 2. **`scale`** — lanczos upscale with accurate rounding. `-1` lets ffmpeg
-///    derive the other dimension from the source aspect ratio.
-/// 3. **`cas`** — Contrast Adaptive Sharpen to recover fine detail after the
-///    resize without amplifying flat-area artifacts.
-///
-/// # Encoding
-///
-/// Uses **libx265** (HEVC) with 10-bit colour (`yuv420p10le`), preset
-/// `veryslow`, and CRF 16. The `hvc1` tag ensures Apple compatibility.
 pub async fn upscale_video(input: &str, output: &str) -> anyhow::Result<()> {
     let (src_w, src_h) = probe_dimensions(input).await?;
 
-    // Anchor the longer dimension at 1920; let ffmpeg compute the other via -1.
     let scale_spec = if src_w >= src_h {
-        // Landscape / square — drive width, derive height.
-        format!("{TARGET_LONG_SIDE}:-1")
+        format!("{TARGET_LONG_SIDE}:-2")
     } else {
-        // Portrait — drive height, derive width.
-        format!("-1:{TARGET_LONG_SIDE}")
+        format!("-2:{TARGET_LONG_SIDE}")
     };
 
-    // Filter graph: denoise → scale → sharpen
     let vf = format!(
-        "hqdn3d=4:3:6:4.5,\
-         scale={scale_spec}:flags=lanczos+accurate_rnd,\
+        "format=yuv420p10le,\
+         nlmeans=s=1.5,\
+         scale={scale_spec}:flags=lanczos+accurate_rnd:param0=3,\
          cas=0.7"
     );
 
@@ -94,6 +68,8 @@ pub async fn upscale_video(input: &str, output: &str) -> anyhow::Result<()> {
             "veryslow",
             "-crf",
             "16",
+            "-x265-params",
+            "aq-mode=3:no-sao=1",
             "-pix_fmt",
             "yuv420p10le",
             "-tag:v",

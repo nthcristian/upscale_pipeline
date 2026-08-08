@@ -1,7 +1,5 @@
 use anyhow::Context;
 
-const TARGET_LONG_SIDE: u32 = 1280;
-
 async fn probe_dimensions(input: &str) -> anyhow::Result<(u32, u32)> {
     let output = tokio::process::Command::new("ffprobe")
         .args([
@@ -40,13 +38,13 @@ async fn probe_dimensions(input: &str) -> anyhow::Result<(u32, u32)> {
     Ok((w, h))
 }
 
-pub async fn upscale_video(input: &str, output: &str) -> anyhow::Result<()> {
+pub async fn upscale_video(input: &str, output: &str, target_long_side: u32) -> anyhow::Result<()> {
     let (src_w, src_h) = probe_dimensions(input).await?;
 
     let scale_spec = if src_w >= src_h {
-        format!("{TARGET_LONG_SIDE}:-2")
+        format!("{target_long_side}:-2")
     } else {
-        format!("-2:{TARGET_LONG_SIDE}")
+        format!("-2:{target_long_side}")
     };
 
     let vf = format!(

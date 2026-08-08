@@ -5,7 +5,7 @@ use anyhow::Context;
 mod api;
 mod upscale;
 
-const DEFAULT_MODEL: &str = "bytedance/seedance-1-5-pro";
+const DEFAULT_MODEL: &str = "bytedance/seedance-2.0-fast";
 const USAGE: &str = "\
 Usage: upscale_pipeline --prompt <PROMPT> [OPTIONS]
 
@@ -44,19 +44,11 @@ fn parse_args() -> anyhow::Result<Args> {
         match args[i].as_str() {
             "--prompt" | "-p" => {
                 i += 1;
-                prompt = Some(
-                    args.get(i)
-                        .context("missing value for --prompt")?
-                        .clone(),
-                );
+                prompt = Some(args.get(i).context("missing value for --prompt")?.clone());
             }
             "--image" | "-i" => {
                 i += 1;
-                image = Some(
-                    args.get(i)
-                        .context("missing value for --image")?
-                        .clone(),
-                );
+                image = Some(args.get(i).context("missing value for --image")?.clone());
             }
             "--aspect-ratio" | "-a" => {
                 i += 1;
@@ -65,9 +57,9 @@ fn parse_args() -> anyhow::Result<Args> {
                     "1:1" => api::AspectRatio::Square,
                     "16:9" => api::AspectRatio::Landscape,
                     "9:16" => api::AspectRatio::Portrait,
-                    other => anyhow::bail!(
-                        "invalid aspect ratio '{other}'. Use 1:1, 16:9, or 9:16"
-                    ),
+                    other => {
+                        anyhow::bail!("invalid aspect ratio '{other}'. Use 1:1, 16:9, or 9:16")
+                    }
                 });
             }
             "--duration" | "-d" => {
@@ -80,11 +72,7 @@ fn parse_args() -> anyhow::Result<Args> {
             }
             "--model" | "-m" => {
                 i += 1;
-                model = Some(
-                    args.get(i)
-                        .context("missing value for --model")?
-                        .clone(),
-                );
+                model = Some(args.get(i).context("missing value for --model")?.clone());
             }
             other => anyhow::bail!("unknown argument: {other}\n\n{USAGE}"),
         }

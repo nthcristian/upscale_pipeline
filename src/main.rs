@@ -11,19 +11,22 @@ Usage: upscale_pipeline --prompt <PROMPT> [OPTIONS]
 
 Options:
   -p, --prompt <TEXT>        Video generation prompt (required)
+  -d, --duration <SECS>      Video duration in seconds (required)
+  -m, --model <MODEL>        Model ID (default: bytedance/seedance-1-5-pro)
   -i, --image <PATH>         Input reference image to upload
   -a, --aspect-ratio <AR>    Target aspect ratio: 1:1, 16:9, or 9:16
-  -d, --duration <SECS>      Video duration in seconds (e.g. 4, 8)
-  -m, --model <MODEL>        Model ID (default: bytedance/seedance-1-5-pro)
+  -r, --resolution <RES>     Output resolution: SD, HD, or FHD (default: SD)
+  -s, --size <PX>            Upscale longer side to N pixels (omitting skips upscale)
   -h, --help                 Print this help";
 
 struct Args {
     prompt: String,
     image: Option<String>,
     aspect_ratio: Option<api::AspectRatio>,
-    duration: Option<i32>,
+    duration: i32,
     model: String,
     resolution: Option<api::Resolution>,
+    upscale_to: Option<u32>,
 }
 
 fn parse_args() -> anyhow::Result<Args> {
@@ -40,6 +43,7 @@ fn parse_args() -> anyhow::Result<Args> {
     let mut duration = None;
     let mut model = None;
     let mut resolution = None;
+    let mut upscale_to = None;
 
     let mut i = 1;
     while i < args.len() {
@@ -88,12 +92,21 @@ fn parse_args() -> anyhow::Result<Args> {
                     }
                 });
             }
+            "--size" | "-s" => {
+                i += 1;
+                let val = args.get(i).context("missing value for --size")?;
+                upscale_to = Some(
+                    val.parse::<u32>()
+                        .context("--size must be a positive integer (pixels)")?,
+                );
+            }
             other => anyhow::bail!("unknown argument: {other}\n\n{USAGE}"),
         }
         i += 1;
     }
 
     let prompt = prompt.context(format!("--prompt is required\n\n{USAGE}"))?;
+    let duration = duration.context(format!("--duration is required\n\n{USAGE}"))?;
 
     Ok(Args {
         prompt,
@@ -102,6 +115,7 @@ fn parse_args() -> anyhow::Result<Args> {
         duration,
         model: model.unwrap_or_else(|| DEFAULT_MODEL.into()),
         resolution: resolution.map_or(Some(api::Resolution::SD), |it| Some(it)),
+        upscale_to,
     })
 }
 
@@ -168,20 +182,22 @@ async fn main() -> anyhow::Result<()> {
         let tmp_path = format!("/tmp/{job_id}-{i}.mp4");
         let out_path = format!("output/{job_id}-{i}.mp4");
 
-        println!(
-            "Video {}/{}: downloading → upscaling → output",
-            i + 1,
-            download_urls.len()
-        );
+        print!("Video {}/{}: downloading", i + 1, download_urls.len());
 
         client
             .download_from(url, &tmp_path)
             .await
             .context("failed to download generated video")?;
 
-        upscale::upscale_video(&tmp_path, &out_path)
-            .await
-            .context("failed to upscale video")?;
+        if let Some(size) = args.upscale_to {
+            println!(" → upscaling to {size}px...");
+            upscale::upscale_video(&tmp_path, &out_path, size)
+                .await
+                .context("failed to upscale video")?;
+        } else {
+            println!(" → output");
+            std::fs::copy(&tmp_path, &out_path).context("failed to copy video to output/")?;
+        }
 
         // Clean up the temporary download.
         if let Err(e) = std::fs::remove_file(&tmp_path) {

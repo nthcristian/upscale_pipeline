@@ -23,6 +23,7 @@ struct Args {
     aspect_ratio: Option<api::AspectRatio>,
     duration: Option<i32>,
     model: String,
+    resolution: Option<api::Resolution>,
 }
 
 fn parse_args() -> anyhow::Result<Args> {
@@ -38,6 +39,7 @@ fn parse_args() -> anyhow::Result<Args> {
     let mut aspect_ratio = None;
     let mut duration = None;
     let mut model = None;
+    let mut resolution = None;
 
     let mut i = 1;
     while i < args.len() {
@@ -74,6 +76,18 @@ fn parse_args() -> anyhow::Result<Args> {
                 i += 1;
                 model = Some(args.get(i).context("missing value for --model")?.clone());
             }
+            "--resolution" | "-r" => {
+                i += 1;
+                let val = args.get(i).context("missing value for --resolution")?;
+                resolution = Some(match val.to_lowercase().as_str() {
+                    "sd" | "480p" => api::Resolution::SD,
+                    "hd" | "720p" => api::Resolution::HD,
+                    "fhd" | "1080p" => api::Resolution::FHD,
+                    other => {
+                        anyhow::bail!("invalid resolution '{other}'. Use SD, HD, or FHD")
+                    }
+                });
+            }
             other => anyhow::bail!("unknown argument: {other}\n\n{USAGE}"),
         }
         i += 1;
@@ -87,6 +101,7 @@ fn parse_args() -> anyhow::Result<Args> {
         aspect_ratio,
         duration,
         model: model.unwrap_or_else(|| DEFAULT_MODEL.into()),
+        resolution: resolution.map_or(Some(api::Resolution::SD), |it| Some(it)),
     })
 }
 
@@ -122,7 +137,7 @@ async fn main() -> anyhow::Result<()> {
         model: args.model,
         prompt: args.prompt,
         duration: args.duration,
-        resolution: Some(api::Resolution::SD), // 480p
+        resolution: args.resolution,
         aspect_ratio: args.aspect_ratio,
         size: None,
         input_references,

@@ -92,12 +92,12 @@ fn parse_args() -> anyhow::Result<Args> {
                     }
                 });
             }
-            "--size" | "-s" => {
+            "--upscale" | "-u" => {
                 i += 1;
-                let val = args.get(i).context("missing value for --size")?;
+                let val = args.get(i).context("missing value for --upscale")?;
                 upscale_to = Some(
                     val.parse::<u32>()
-                        .context("--size must be a positive integer (pixels)")?,
+                        .context("--upscale must be a positive integer (pixels)")?,
                 );
             }
             other => anyhow::bail!("unknown argument: {other}\n\n{USAGE}"),

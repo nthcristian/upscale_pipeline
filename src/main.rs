@@ -1,9 +1,7 @@
+use anyhow::Context;
 use std::env;
 
-use anyhow::Context;
-
-mod api;
-mod upscale;
+use upscale_pipeline::*;
 
 const DEFAULT_MODEL: &str = "bytedance/seedance-2.0-fast";
 const USAGE: &str = "\

@@ -10,8 +10,8 @@ pub struct Job {
 pub struct VideoRequest {
     pub model: String,
     pub prompt: String,
+    pub duration: i32,
 
-    pub duration: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub resolution: Option<Resolution>,
     #[serde(skip_serializing_if = "Option::is_none")]

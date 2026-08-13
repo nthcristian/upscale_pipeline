@@ -14,7 +14,7 @@ Options:
   -i, --image <PATH>         Input reference image to upload
   -a, --aspect-ratio <AR>    Target aspect ratio: 1:1, 16:9, or 9:16
   -r, --resolution <RES>     Output resolution: SD, HD, or FHD (default: SD)
-  -s, --size <PX>            Upscale longer side to N pixels (omitting skips upscale)
+  -u, --upscale <PX>         Upscale longer side to N pixels (omitting skips upscale)
   -h, --help                 Print this help";
 
 struct Args {

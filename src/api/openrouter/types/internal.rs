@@ -52,6 +52,10 @@ pub enum Resolution {
     HD,
     #[serde(rename = "480p")]
     SD,
+    #[serde(rename = "2K")]
+    QHD,
+    #[serde(rename = "4K")]
+    UHD,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

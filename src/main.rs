@@ -13,7 +13,7 @@ Options:
   -m, --model <MODEL>        Model ID (default: bytedance/seedance-1-5-pro)
   -i, --image <PATH>         Input reference image to upload
   -a, --aspect-ratio <AR>    Target aspect ratio: 1:1, 16:9, or 9:16
-  -r, --resolution <RES>     Output resolution: SD, HD, or FHD (default: SD)
+  -r, --resolution <RES>     Output resolution: SD, HD, FHD, 2K or 4k (default: SD)
   -u, --upscale <PX>         Upscale longer side to N pixels (omitting skips upscale)
   -h, --help                 Print this help";
 
@@ -85,8 +85,10 @@ fn parse_args() -> anyhow::Result<Args> {
                     "sd" | "480p" => api::Resolution::SD,
                     "hd" | "720p" => api::Resolution::HD,
                     "fhd" | "1080p" => api::Resolution::FHD,
+                    "2k" | "1440p" => api::Resolution::QHD,
+                    "4k" | "2160p" => api::Resolution::UHD,
                     other => {
-                        anyhow::bail!("invalid resolution '{other}'. Use SD, HD, or FHD")
+                        anyhow::bail!("invalid resolution '{other}'. Use SD, HD, FHD, 2k, 4k")
                     }
                 });
             }
